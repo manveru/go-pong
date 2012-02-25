@@ -9,18 +9,6 @@ import (
   "fmt"
 )
 
-/************************************************
-A simple game of Pong.
-Run `pong -h` for the available options.
-
-Keyboard controls are:
-j: paddle down
-k: paddle up
-p: pause
-q: quit
-
-************************************************/
-
 var worldHeight *int = flag.Int("height", 200, "Height of Game")
 var worldWidth *int = flag.Int("width", 200, "Width of Game")
 var paddleSpeed *int = flag.Int("player-speed", 4, "Speed of player paddle")
@@ -70,10 +58,10 @@ func NewBall(x, y float64) (ball *Ball) {
 }
 
 
-func (self *Ball) Update(world *World) {
-  velocity := self.velocity
-  future := self.vector.Plus(velocity)
-  radius := self.radius
+func (ball *Ball) Update(world *World) {
+  velocity := ball.velocity
+  future := ball.vector.Plus(velocity)
+  radius := ball.radius
 
   if velocity.Y < 0 && future.Y <= radius {
     velocity.Y = -velocity.Y
@@ -85,11 +73,11 @@ func (self *Ball) Update(world *World) {
 
   if velocity.X < 0 {
     paddle := world.Paddle
-    hit, _ := paddle.Hit(self.vector, future)
+    hit, _ := paddle.Hit(ball.vector, future)
 
     if hit {
       velocity.X = -velocity.X
-      velocity = velocity.Normalize().MultiplyNum(self.speed)
+      velocity = velocity.Normalize().MultiplyNum(ball.speed)
     } else if future.X <= radius {
       fmt.Println("Enemy scores")
       world.Score.Enemy++
@@ -99,11 +87,11 @@ func (self *Ball) Update(world *World) {
 
   if velocity.X > 0 {
     enemy := world.Enemy
-    hit, _ := enemy.Hit(self.vector, future)
+    hit, _ := enemy.Hit(ball.vector, future)
 
     if hit {
       velocity.X = -velocity.X
-      velocity = velocity.Normalize().MultiplyNum(self.speed)
+      velocity = velocity.Normalize().MultiplyNum(ball.speed)
     } else if future.X >= float64(world.Width) {
       fmt.Println("Player scores")
       world.Score.Paddle++
@@ -111,18 +99,18 @@ func (self *Ball) Update(world *World) {
     }
   }
 
-  self.velocity = velocity
-  self.vector = self.vector.Plus(velocity)
+  ball.velocity = velocity
+  ball.vector = ball.vector.Plus(velocity)
 }
 
-func (self *Ball) Draw(world *World) {
-  world.Screen.FillRect(self.Rect(), self.color)
+func (ball *Ball) Draw(world *World) {
+  world.Screen.FillRect(ball.Rect(), ball.color)
 }
 
-func (self *Ball) Rect() *sdl.Rect {
-  size := uint16(self.radius * 2)
-  x := self.vector.X - self.radius
-  y := self.vector.Y - self.radius
+func (ball *Ball) Rect() *sdl.Rect {
+  size := uint16(ball.radius * 2)
+  x := ball.vector.X - ball.radius
+  y := ball.vector.Y - ball.radius
   return &sdl.Rect{X: int16(x), Y: int16(y), W: size, H: size}
 }
 
@@ -144,46 +132,46 @@ func NewPaddle(x, y, w, h float64) *Paddle {
   }
 }
 
-func (self *Paddle) Go(x, y float64) {
-  self.target = &Vector2{X: self.vector.X, Y: y}
+func (paddle *Paddle) Go(x, y float64) {
+  paddle.target = &Vector2{X: paddle.vector.X, Y: y}
 }
 
-func (self *Paddle) Update(world *World) {
-  goal := self.target.Minus(self.vector)
+func (paddle *Paddle) Update(world *World) {
+  goal := paddle.target.Minus(paddle.vector)
 
-  if goal.Length() > self.speed {
-    goal = goal.Normalize().MultiplyNum(self.speed)
+  if goal.Length() > paddle.speed {
+    goal = goal.Normalize().MultiplyNum(paddle.speed)
   }
 
-  future := self.vector.Plus(goal)
-  if future.Y < (self.height / 2) {
+  future := paddle.vector.Plus(goal)
+  if future.Y < (paddle.height / 2) {
     return
   }
-  if (future.Y + (self.height / 2)) > float64(world.Height) {
+  if (future.Y + (paddle.height / 2)) > float64(world.Height) {
     return
   }
-  self.vector = future
+  paddle.vector = future
 }
 
-func (self *Paddle) Draw(world *World) {
-  world.Screen.FillRect(self.Rect(), self.color)
+func (paddle *Paddle) Draw(world *World) {
+  world.Screen.FillRect(paddle.Rect(), paddle.color)
 }
 
-func (self *Paddle) Rect() *sdl.Rect {
-  h := self.height
-  w := self.width
-  x := self.vector.X - float64(w/2)
-  y := self.vector.Y - float64(h/2)
+func (paddle *Paddle) Rect() *sdl.Rect {
+  h := paddle.height
+  w := paddle.width
+  x := paddle.vector.X - float64(w/2)
+  y := paddle.vector.Y - float64(h/2)
   return &sdl.Rect{X: int16(x), Y: int16(y), W: uint16(w), H: uint16(h)}
 }
-func (self *Paddle) Hit(past, future *Vector2) (hit bool, place *Vector2) {
+func (paddle *Paddle) Hit(past, future *Vector2) (hit bool, place *Vector2) {
   // our front line
-  halfHeight := self.height / 2
-  halfWidth := self.width / 2
-  x0, y0 := (self.vector.X + halfWidth), (self.vector.Y - halfHeight)
-  x1, y1 := (self.vector.X + halfWidth), (self.vector.Y + halfHeight)
+  halfHeight := paddle.height / 2
+  halfWidth := paddle.width / 2
+  x0, y0 := (paddle.vector.X + halfWidth), (paddle.vector.Y - halfHeight)
+  x1, y1 := (paddle.vector.X + halfWidth), (paddle.vector.Y + halfHeight)
 
-  return self.hitCore(x0, y0, x1, y1, past, future)
+  return paddle.hitCore(x0, y0, x1, y1, past, future)
 }
 
 type Enemy struct {
@@ -203,17 +191,17 @@ func NewEnemy(x, y, w, h float64) *Enemy {
   }
 }
 
-func (self *Enemy) Hit(past, future *Vector2) (hit bool, place *Vector2) {
+func (enemy *Enemy) Hit(past, future *Vector2) (hit bool, place *Vector2) {
   // our front line
-  halfHeight := self.height / 2
-  halfWidth := self.width / 2
-  x0, y0 := (self.vector.X - halfWidth), (self.vector.Y - halfHeight)
-  x1, y1 := (self.vector.X - halfWidth), (self.vector.Y + halfHeight)
+  halfHeight := enemy.height / 2
+  halfWidth := enemy.width / 2
+  x0, y0 := (enemy.vector.X - halfWidth), (enemy.vector.Y - halfHeight)
+  x1, y1 := (enemy.vector.X - halfWidth), (enemy.vector.Y + halfHeight)
 
-  return self.hitCore(x0, y0, x1, y1, past, future)
+  return enemy.hitCore(x0, y0, x1, y1, past, future)
 }
 
-func (self *Paddle) hitCore(x0, y0, x1, y1 float64, past, future *Vector2) (hit bool, place *Vector2) {
+func (paddle *Paddle) hitCore(x0, y0, x1, y1 float64, past, future *Vector2) (hit bool, place *Vector2) {
   // line between past and future
   x2, y2 := past.X, past.Y
   x3, y3 := future.X, future.Y
@@ -239,27 +227,27 @@ func (self *Paddle) hitCore(x0, y0, x1, y1 float64, past, future *Vector2) (hit 
   return
 }
 
-func (self *Enemy) Update(world *World) {
+func (enemy *Enemy) Update(world *World) {
   if world.Ball.velocity.X > 0 {
     targetY := world.Ball.vector.Y
-    targetX := self.vector.X
-    goal := (&Vector2{X: targetX, Y: targetY}).Minus(self.vector)
+    targetX := enemy.vector.X
+    goal := (&Vector2{X: targetX, Y: targetY}).Minus(enemy.vector)
 
-    if goal.Length() > self.speed {
-      goal = goal.Normalize().MultiplyNum(self.speed)
+    if goal.Length() > enemy.speed {
+      goal = goal.Normalize().MultiplyNum(enemy.speed)
     }
 
-    self.target = goal
+    enemy.target = goal
   }
 
-  future := self.vector.Plus(self.target)
-  if future.Y < (self.height / 2) {
+  future := enemy.vector.Plus(enemy.target)
+  if future.Y < (enemy.height / 2) {
     return
   }
-  if (future.Y + (self.height / 2)) > float64(world.Height) {
+  if (future.Y + (enemy.height / 2)) > float64(world.Height) {
     return
   }
-  self.vector = future
+  enemy.vector = future
 }
 
 type World struct {
@@ -287,25 +275,25 @@ func NewWorld(height, width int) *World {
   }
 }
 
-func (self *World) HandleEvents() {
-  for self.running {
+func (world *World) HandleEvents() {
+  for world.running {
     for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
       switch e := ev.(type) {
       case *sdl.QuitEvent:
-        self.running = false
+        world.running = false
       case *sdl.KeyboardEvent:
         switch sdl.GetKeyName(sdl.Key(e.Keysym.Sym)) {
         case "p":
-          self.pause = !self.pause
+          world.pause = !world.pause
         case "j":
-          self.Paddle.Go(0, self.Paddle.vector.Y+self.Paddle.speed)
+          world.Paddle.Go(0, world.Paddle.vector.Y+world.Paddle.speed)
         case "k":
-          self.Paddle.Go(0, self.Paddle.vector.Y-self.Paddle.speed)
+          world.Paddle.Go(0, world.Paddle.vector.Y-world.Paddle.speed)
         case "q":
-          self.running = false
+          world.running = false
         }
       case *sdl.MouseMotionEvent:
-        self.Paddle.Go(float64(e.X), float64(e.Y))
+        world.Paddle.Go(float64(e.X), float64(e.Y))
       }
     }
 
@@ -313,34 +301,34 @@ func (self *World) HandleEvents() {
   }
 }
 
-func (self *World) Run() {
-  for self.running {
-    if !self.pause {
-      self.Update()
-      self.Draw()
+func (world *World) Run() {
+  for world.running {
+    if !world.pause {
+      world.Update()
+      world.Draw()
     }
     sdl.Delay(25)
   }
 }
 
-func (self *World) Update() {
-  self.Ball.Update(self)
-  self.Paddle.Update(self)
-  self.Enemy.Update(self)
+func (world *World) Update() {
+  world.Ball.Update(world)
+  world.Paddle.Update(world)
+  world.Enemy.Update(world)
 }
 
-func (self *World) Draw() {
-  self.Screen.FillRect(nil, 0x0)
+func (world *World) Draw() {
+  world.Screen.FillRect(nil, 0x0)
 
-  center := &sdl.Rect{X: int16(self.Width/2) - 1, Y: 0, H: uint16(self.Height * 2), W: 2}
-  self.Screen.FillRect(center, 0x333333)
+  center := &sdl.Rect{X: int16(world.Width/2) - 1, Y: 0, H: uint16(world.Height * 2), W: 2}
+  world.Screen.FillRect(center, 0x333333)
 
-  self.Paddle.Draw(self)
-  self.Enemy.Draw(self)
-  self.Ball.Draw(self)
-  self.Score.Draw(self)
+  world.Paddle.Draw(world)
+  world.Enemy.Draw(world)
+  world.Ball.Draw(world)
+  world.Score.Draw(world)
 
-  self.Screen.Flip()
+  world.Screen.Flip()
 }
 
 type Score struct {
@@ -358,13 +346,13 @@ func NewScore() (score *Score) {
   return score
 }
 
-func (self *Score) Draw(world *World) {
+func (score *Score) Draw(world *World) {
   pRect := &sdl.Rect{
     X: int16(world.Paddle.width + world.Paddle.vector.X),
     Y: 3, W: 3, H: 3,
   }
 
-  for p := self.Paddle; p > 0; p-- {
+  for p := score.Paddle; p > 0; p-- {
     pRect.X += 6
     world.Screen.FillRect(pRect, 0x6666ff)
   }
@@ -379,7 +367,7 @@ func (self *Score) Draw(world *World) {
     Y: int16(world.Height - 6), W: 3, H: 3,
   }
 
-  for e := self.Enemy; e >= 0; e-- {
+  for e := score.Enemy; e >= 0; e-- {
     eRect.X -= 6
     world.Screen.FillRect(eRect, 0xff6666)
   }
@@ -394,25 +382,25 @@ type Vector2 struct {
   X, Y float64
 }
 
-func (self *Vector2) Normalize() *Vector2 {
-  length := self.Length()
-  return &Vector2{X: (self.X / length), Y: (self.Y / length)}
+func (v *Vector2) Normalize() *Vector2 {
+  length := v.Length()
+  return &Vector2{X: (v.X / length), Y: (v.Y / length)}
 }
 
-func (self *Vector2) MultiplyNum(other float64) *Vector2 {
-  return &Vector2{X: (self.X * other), Y: (self.Y * other)}
+func (v *Vector2) MultiplyNum(other float64) *Vector2 {
+  return &Vector2{X: (v.X * other), Y: (v.Y * other)}
 }
 
-func (self *Vector2) Plus(other *Vector2) *Vector2 {
-  return &Vector2{X: (self.X + other.X), Y: (self.Y + other.Y)}
+func (v *Vector2) Plus(other *Vector2) *Vector2 {
+  return &Vector2{X: (v.X + other.X), Y: (v.Y + other.Y)}
 }
 
-func (self *Vector2) Minus(other *Vector2) *Vector2 {
-  return &Vector2{X: (self.X - other.X), Y: (self.Y - other.Y)}
+func (v *Vector2) Minus(other *Vector2) *Vector2 {
+  return &Vector2{X: (v.X - other.X), Y: (v.Y - other.Y)}
 }
 
-func (self *Vector2) Length() float64 {
-  return math.Sqrt((self.X * self.X) + (self.Y * self.Y))
+func (v *Vector2) Length() float64 {
+  return math.Sqrt((v.X * v.X) + (v.Y * v.Y))
 }
 
 func NewSurface(height int, width int) (surface *sdl.Surface) {
